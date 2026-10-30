@@ -85,7 +85,7 @@ AVIはコンテナのため、中の映像コーデックも有効である必�
 2026-10-04のAVI不具合対応では、削っていたUt Video・Lagarith・MagicYUVを戻しました。
 Ut Videoは透過と音声付きの人工AVIで、通常版・MT版からWebPへの変換を確認しました。
 Lagarith・MagicYUVはビルドで有効化しましたが、個別の実変換は未検証です。
-FFmpeg本体は無改変の n5.1.4、CLI入口は固定したffmpeg.wasmの `src/fftools` と `src/bind` です。
+FFmpeg本体は無改変の n5.1.10、CLI入口は固定したffmpeg.wasmの `src/fftools` と `src/bind` です。
 
 音声用はLAME 3.100・libogg 1.3.6・libvorbis 1.3.7の静的ライブラリをリンクした独立したFFmpegです。画像や動画のみの処理ではロードしません。
 MP3・AAC・PCM/ADPCM・FLAC・ALAC・Vorbis・Opus・WMA1/2をデコードし、MP3かOGG（Vorbis）に保存します。

@@ -2,7 +2,7 @@
 
 [なんでもいっぱいめちゃくちゃ軽くするやつ](https://sirubedon.com/karuku/)（しるべどん屋）がブラウザで使っている変換エンジン（WebAssembly）の、**組み立て手順**です。
 
-このサイトは LGPL のライブラリ（FFmpeg 5.1.4・LAME 3.100）を WebAssembly にして配っています。
+このサイトは LGPL のライブラリ（FFmpeg 5.1.10・LAME 3.100）を WebAssembly にして配っています。
 LGPL では、ライブラリのソースに加えて「ビルドに使ったスクリプト」も受け取った人が手に入れられるようにする必要があるため、ここで公開しています。
 
 ## 中身
@@ -20,8 +20,8 @@ LGPL では、ライブラリのソースに加えて「ビルドに使ったス
 
 ## ソースについて
 
-- **FFmpeg 5.1.4・LAME 3.100 は改変していません。** ソースは公式の配布物そのものです。
-  - FFmpeg: https://ffmpeg.org/releases/ffmpeg-5.1.4.tar.xz （Git タグ `n5.1.4`、コミット `4729204c17f756e186d622060088371d10b34f7e`）
+- **FFmpeg 5.1.10・LAME 3.100 は改変していません。** ソースは公式の配布物そのものです。
+  - FFmpeg: https://ffmpeg.org/releases/ffmpeg-5.1.10.tar.xz （Git タグ `n5.1.10`、コミット `19feb712f5c1821d8a3fa1ad63c5bd2e3b9672eb`）
   - LAME: https://sourceforge.net/projects/lame/files/lame/3.100/
 - FFmpeg の CLI 入口は ffmpeg.wasm の固定コミット `f876f907c7e9b9bf51d4ed0b913a855a63ae63fc` をそのまま使っています（https://github.com/ffmpegwasm/ffmpeg.wasm）。
 - そのほかのライブラリの取得元とハッシュは `scripts/codecs/sources.lock.json` にあります。`bootstrap.mjs` が取得と照合をします。
