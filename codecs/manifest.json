@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "emscripten": "3.1.40",
+  "ffmpeg": "5.1.4",
+  "libwebp": "1.6.0",
+  "libdeflate": "1.24",
+  "zlib": "1.3.1",
+  "libavif": "1.2.1",
+  "libaom": "3.12.1",
+  "lame": "3.100",
+  "libogg": "1.3.6",
+  "libvorbis": "1.3.7",
+  "sourceLock": {
+    "emscripten": "3.1.40",
+    "emsdk": {
+      "url": "https://github.com/emscripten-core/emsdk.git",
+      "commit": "96c657fc60920d2a6a82318aa50e0abf82749604"
+    },
+    "git": {
+      "ffmpeg": {
+        "url": "https://github.com/FFmpeg/FFmpeg.git",
+        "commit": "4729204c17f756e186d622060088371d10b34f7e",
+        "tag": "n5.1.4"
+      },
+      "ffmpeg-wasm": {
+        "url": "https://github.com/ffmpegwasm/ffmpeg.wasm.git",
+        "commit": "f876f907c7e9b9bf51d4ed0b913a855a63ae63fc"
+      },
+      "libavif": {
+        "url": "https://github.com/AOMediaCodec/libavif.git",
+        "commit": "fcb084c9387e367750f5375e462005ce298f57cc",
+        "tag": "v1.2.1"
+      },
+      "aom": {
+        "url": "https://aomedia.googlesource.com/aom",
+        "commit": "10aece4157eb79315da205f39e19bf6ab3ee30d0",
+        "tag": "v3.12.1"
+      }
+    },
+    "archives": [
+      {
+        "file": "libwebp-1.6.0.tar.gz",
+        "directory": "libwebp-1.6.0",
+        "url": "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz",
+        "sha256": "e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564"
+      },
+      {
+        "file": "zlib-1.3.1.tar.gz",
+        "directory": "zlib-1.3.1",
+        "url": "https://zlib.net/fossils/zlib-1.3.1.tar.gz",
+        "sha256": "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+      },
+      {
+        "file": "libdeflate-1.24.tar.gz",
+        "directory": "libdeflate-1.24",
+        "url": "https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.24.tar.gz",
+        "sha256": "ad8d3723d0065c4723ab738be9723f2ff1cb0f1571e8bfcf0301ff9661f475e8"
+      },
+      {
+        "file": "lame-3.100.tar.gz",
+        "directory": "lame-3.100",
+        "url": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
+        "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e"
+      },
+      {
+        "file": "libogg-1.3.6.tar.xz",
+        "directory": "libogg-1.3.6",
+        "url": "https://downloads.xiph.org/releases/ogg/libogg-1.3.6.tar.xz",
+        "sha256": "5c8253428e181840cd20d41f3ca16557a9cc04bad4a3d04cce84808677fa1061"
+      },
+      {
+        "file": "libvorbis-1.3.7.tar.xz",
+        "directory": "libvorbis-1.3.7",
+        "url": "https://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.xz",
+        "sha256": "b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b"
+      }
+    ]
+  },
+  "compilerFlags": [
+    "-O3",
+    "-flto",
+    "-msimd128",
+    "-msse2"
+  ],
+  "codecs": {
+    "image": {
+      "files": {
+        "image-core.js": {
+          "bytes": 12990,
+          "sha256": "54f8b30e1ba1eded5a98dff874876955cf35403564be106b275b4bf03e1eb10a"
+        },
+        "image-core.wasm": {
+          "bytes": 698708,
+          "sha256": "737fd878beb63e1a7369453da4d16b52bad4e72e672357afbf48d1a0faf1f8a9"
+        }
+      },
+      "initialMemoryBytes": 16777216,
+      "threads": 1
+    },
+    "avif": {
+      "files": {
+        "avif-core.js": {
+          "bytes": 16894,
+          "sha256": "1ac08e6a4baca4a1c544afed3863ef6fe550f4877a71962fda06bceba65965a7"
+        },
+        "avif-core.wasm": {
+          "bytes": 9104674,
+          "sha256": "39b1dca8a7d61d2b575bd33d57eb55062cf9dc4cf939ae9c333cefc07cfcf327"
+        }
+      },
+      "initialMemoryBytes": 33554432,
+      "compilerFlags": [
+        "-O3",
+        "-flto",
+        "-msimd128",
+        "-DNDEBUG"
+      ],
+      "filesystem": false,
+      "features": [
+        "avif-still-encode",
+        "avif-sequence-encode",
+        "avif-decode",
+        "lossless-alpha"
+      ],
+      "av1Codec": "aom",
+      "cpu": "generic",
+      "threads": 1
+    },
+    "audio": {
+      "files": {
+        "ffmpeg-core.js": {
+          "bytes": 84917,
+          "sha256": "60c0ae050bc57d885f406c73769bb72f37a29f8f71aa8a52b67ba2f4450300e0"
+        },
+        "ffmpeg-core.wasm": {
+          "bytes": 2200750,
+          "sha256": "a3bd8086b6f9328851d0f913ac4e61b512930f3235179c19887bbd7d79305eb9"
+        }
+      },
+      "initialMemoryBytes": 33554432,
+      "features": [
+        "mp3-encode",
+        "vorbis-encode",
+        "mp3-decode",
+        "aac-decode",
+        "pcm-decode",
+        "flac-decode",
+        "alac-decode",
+        "vorbis-decode",
+        "opus-decode",
+        "wma-decode"
+      ],
+      "encoders": [
+        "libmp3lame",
+        "libvorbis"
+      ],
+      "filesystem": "WORKERFS",
+      "threads": 1
+    },
+    "st": {
+      "files": {
+        "ffmpeg-core.js": {
+          "bytes": 84961,
+          "sha256": "568a581d31620448f594f430ee4d2f824cd6398d49dff5d8e2dda151f41aee3d"
+        },
+        "ffmpeg-core.wasm": {
+          "bytes": 4064001,
+          "sha256": "8a88b78b5b374d706ad5c458d57285a944ef8c33f11095a144819de7529f62ab"
+        }
+      },
+      "initialMemoryBytes": 33554432,
+      "threads": 1
+    },
+    "mt": {
+      "files": {
+        "ffmpeg-core.js": {
+          "bytes": 103176,
+          "sha256": "719d08a3d66aceef3bec4b81e7a189a5497bcea101cefc3f7d49f4f00905b07d"
+        },
+        "ffmpeg-core.wasm": {
+          "bytes": 4174894,
+          "sha256": "f0d7fc1320d62172d8c90843fe7f45ee807524d61e9afd49f4aadc282a7ef099"
+        },
+        "ffmpeg-core.worker.js": {
+          "bytes": 2116,
+          "sha256": "c3b4132146cc775846d9c09b8ed8818aafc8181475577a7b033960f23c1f1ed6"
+        }
+      },
+      "initialMemoryBytes": 134217728,
+      "threads": 2
+    }
+  }
+}
