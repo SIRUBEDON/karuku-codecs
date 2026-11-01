@@ -82,7 +82,7 @@ if (mode === 'image') {
   const outputDir = join(root, 'codecs/image');
   await mkdir(outputDir, { recursive: true });
   const exports = ['malloc', 'free', 'kw_result', 'kw_result_size', 'kw_clear_result', 'kw_webp',
-    'kw_anim_new', 'kw_anim_add', 'kw_anim_finish', 'kw_anim_delete', 'kw_zlib', 'kw_sub', 'kw_equal',
+    'kw_anim_new', 'kw_anim_add', 'kw_anim_finish', 'kw_anim_delete', 'kw_zlib', 'kw_sub', 'kw_filter', 'kw_png', 'kw_equal',
     'kw_decoder_new', 'kw_decoder_info', 'kw_decoder_next', 'kw_decoder_delete'].map(n => `_${n}`);
   await run('emcc', [...flags, `-I${join(webp, 'src')}`, `-I${deflate}`, join(root, 'scripts/codecs/image.c'),
     `-L${join(prefix, 'lib')}`, '-lwebp', '-ldeflate', '-sMODULARIZE', '-sEXPORT_ES6', '-sEXPORT_NAME=createImageCore',
