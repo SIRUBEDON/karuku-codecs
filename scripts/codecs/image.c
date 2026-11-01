@@ -27,20 +27,74 @@ static int config_for(WebPConfig *config, float quality, int lossless, int metho
   return WebPValidateConfig(config);
 }
 
-int kw_webp(const uint8_t *rgba, int width, int height, float quality, int lossless, int method) {
-  WebPConfig config;
+static int encode_rgba(const WebPConfig *config, const uint8_t *rgba, int width, int height, WebPMemoryWriter *writer) {
   WebPPicture picture;
-  WebPMemoryWriter writer;
-  clear_result();
-  if (!config_for(&config, quality, lossless, method) || !WebPPictureInit(&picture)) return 0;
+  WebPMemoryWriterInit(writer);
+  if (!WebPPictureInit(&picture)) return 0;
   picture.width = width; picture.height = height; picture.use_argb = 1;
-  WebPMemoryWriterInit(&writer);
-  picture.writer = WebPMemoryWrite; picture.custom_ptr = &writer;
-  int ok = WebPPictureImportRGBA(&picture, rgba, width * 4) && WebPEncode(&config, &picture);
-  if (ok) { result = writer.mem; result_size = writer.size; }
-  else WebPMemoryWriterClear(&writer);
+  picture.writer = WebPMemoryWrite; picture.custom_ptr = writer;
+  int ok = WebPPictureImportRGBA(&picture, rgba, width * 4) && WebPEncode(config, &picture);
+  if (!ok) WebPMemoryWriterClear(writer);
   WebPPictureFree(&picture);
   return ok;
+}
+// The whole chunk (header and padding) tagged `tag` in a RIFF WebP, or NULL.
+static const uint8_t *find_chunk(const uint8_t *data, size_t size, const char *tag, size_t *length) {
+  for (size_t at = 12; at + 8 <= size;) {
+    size_t body = data[at + 4] | data[at + 5] << 8 | data[at + 6] << 16 | (size_t)data[at + 7] << 24, whole = 8 + body + (body & 1);
+    if (whole > size - at) return NULL;
+    if (!memcmp(data + at, tag, 4)) { *length = whole; return data + at; }
+    at += whole;
+  }
+  return NULL;
+}
+static void put32(uint8_t *at, size_t value) { at[0] = value; at[1] = value >> 8; at[2] = value >> 16; at[3] = value >> 24; }
+/* libwebp ties the lossless alpha effort to `method`; at 6 its alpha search (VP8L quality 100, effort 6) takes 5-40x the
+ * colour encode. The colour is encoded at 6 with raw alpha, and the ALPH chunk is replaced by the alpha plane encoded as
+ * libwebp does it internally, as the green of an opaque lossless picture, at method 5 quality 100 (nearly the same bytes):
+ * its VP8L image stream after the 5-byte header, behind the ALPH byte "lossless, no filter". Exact alpha either way. */
+static int webp_alpha_apart(const uint8_t *rgba, int width, int height, float quality) {
+  WebPConfig config; WebPMemoryWriter colour, alpha;
+  if (!config_for(&config, quality, 0, 6)) return 0;
+  config.alpha_compression = 0;
+  if (!encode_rgba(&config, rgba, width, height, &colour)) return 0;
+  size_t vp8x_size, vp8_size, alph_size, vp8l_size;
+  const uint8_t *vp8x = find_chunk(colour.mem, colour.size, "VP8X", &vp8x_size), *vp8 = find_chunk(colour.mem, colour.size, "VP8 ", &vp8_size);
+  if (!vp8x || !find_chunk(colour.mem, colour.size, "ALPH", &alph_size)) { result = colour.mem; result_size = colour.size; return 1; }
+  size_t pixels = (size_t)width * height;
+  uint8_t *green = vp8 ? calloc(pixels, 4) : NULL;
+  int ok = green && config_for(&config, 100, 1, 5);
+  if (ok) {
+    for (size_t i = 0; i < pixels; i++) { green[i * 4 + 1] = rgba[i * 4 + 3]; green[i * 4 + 3] = 255; }
+    ok = encode_rgba(&config, green, width, height, &alpha);
+  }
+  free(green);
+  if (!ok) { WebPMemoryWriterClear(&colour); return 0; }
+  const uint8_t *vp8l = find_chunk(alpha.mem, alpha.size, "VP8L", &vp8l_size);
+  size_t stream = vp8l ? vp8l[4] | vp8l[5] << 8 | vp8l[6] << 16 | (size_t)vp8l[7] << 24 : 0;
+  ok = vp8l && stream > 5 && vp8l[8] == 0x2f;
+  size_t body = 1 + stream - 5, total = 12 + vp8x_size + 8 + body + (body & 1) + vp8_size;
+  uint8_t *out = ok ? malloc(total) : NULL, *at = out;
+  if (out) {
+    memcpy(at, "RIFF", 4); put32(at + 4, total - 8); memcpy(at + 8, "WEBP", 4); at += 12;
+    memcpy(at, vp8x, vp8x_size); at += vp8x_size;
+    memcpy(at, "ALPH", 4); put32(at + 4, body); at[8] = 1; memcpy(at + 9, vp8l + 8 + 5, stream - 5); at += 8 + body;
+    if (body & 1) *at++ = 0;
+    memcpy(at, vp8, vp8_size);
+    result = out; result_size = total;
+  }
+  WebPMemoryWriterClear(&colour); WebPMemoryWriterClear(&alpha);
+  return out != NULL;
+}
+
+int kw_webp(const uint8_t *rgba, int width, int height, float quality, int lossless, int method) {
+  WebPConfig config;
+  WebPMemoryWriter writer;
+  clear_result();
+  if (!lossless && method == 6) return webp_alpha_apart(rgba, width, height, quality);
+  if (!config_for(&config, quality, lossless, method) || !encode_rgba(&config, rgba, width, height, &writer)) return 0;
+  result = writer.mem; result_size = writer.size;
+  return 1;
 }
 
 typedef struct { WebPAnimEncoder *encoder; int timestamp; int width; int height; } Animation;

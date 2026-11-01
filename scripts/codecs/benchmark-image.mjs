@@ -1,6 +1,6 @@
 // PNG pipeline benchmark: the synthetic 960×540 gradient through the JS (fflate) and WASM (libdeflate) encoders, the old
 // Sub-only WASM stream (compressSub) next to the current filter choice (compressPixels) at levels 4 and 9 on the bench
-// PNGs, and recompressPng against re-deflating only. Every output is checked to unfilter to the input pixels.
+// PNGs, recompressPng against re-deflating only, and still PNG output as RGBA only against the exact type reduction. Every output is checked to unfilter to the input pixels.
 import { readFile, readdir } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { concatBytes, encodeRgbaPng, filterRows, parsePng, recompressPng, unfilterRows } from '../../src/media/png.js';
@@ -29,6 +29,17 @@ const samples = png => {
   const p = parsePng(png), bits = CHANNELS[p.colorType] * p.bitDepth, rows = idat(png);
   return p.interlace ? rows : unfilterRows(rows, p.width, p.height, Math.max(1, bits >> 3), Math.ceil(p.width * bits / 8));
 };
+/** 8-bit RGBA of a non-interlaced PNG up to 8 bits per sample, any colour type (PLTE/tRNS and grey scaling per spec 11.2.2). */
+const rgbaOf = png => {
+  const p = parsePng(png), channels = CHANNELS[p.colorType], raw = samples(png), stride = Math.ceil(p.width * channels * p.bitDepth / 8), max = (1 << p.bitDepth) - 1;
+  const chunk = type => p.chunks.find(c => c.type === type)?.data, plte = chunk('PLTE'), trns = chunk('tRNS') ?? new Uint8Array(), out = new Uint8Array(p.width * p.height * 4);
+  for (let y = 0; y < p.height; y++) for (let x = 0; x < p.width; x++) {
+    const s = k => { const bit = (x * channels + k) * p.bitDepth; return (raw[y * stride + (bit >> 3)] >> (8 - p.bitDepth - (bit & 7))) & max; };
+    out.set(p.colorType === 3 ? [...plte.subarray(s(0) * 3, s(0) * 3 + 3), s(0) < trns.length ? trns[s(0)] : 255] : p.colorType === 0 ? [...Array(3).fill(s(0) * 255 / max), 255]
+      : p.colorType === 4 ? [s(0), s(0), s(0), s(1)] : p.colorType === 2 ? [s(0), s(1), s(2), 255] : [s(0), s(1), s(2), s(3)], (y * p.width + x) * 4);
+  }
+  return out;
+};
 const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 const rowTypes = (rows, stride, h) => { const n = [0, 0, 0, 0, 0]; for (let y = 0; y < h; y++) n[rows[y * (stride + 1)]]++; return n; };
 
@@ -46,9 +57,21 @@ for (const r of [js, wasm, wasm4, legacy, legacy4]) delete r.data;
 const files = [...(await readdir(new URL('tests/fixtures/bench/', ROOT))).filter(f => f.endsWith('.png')).map(f => `tests/fixtures/bench/${f}`),
   ...(await readdir(new URL('tests/fixtures/bench/png/', ROOT))).filter(f => f.endsWith('.png')).map(f => `tests/fixtures/bench/png/${f}`),
   'public/fixtures/frame_00001.png', 'public/fixtures/uncompressed.png'];
-const images = [], recompress = [];
+const images = [], recompress = [], stills = [];
 for (const file of files) {
   const bytes = new Uint8Array(await readFile(new URL(file, ROOT))), p = parsePng(bytes), stride = p.width * 4;
+  // Still PNG output of the same pixels: RGBA only (the previous encodeRgbaPng) next to the exact type reduction.
+  if (p.bitDepth <= 8 && !p.interlace && file.startsWith('tests/')) {
+    const pixels = rgbaOf(bytes), row = { file, width: p.width, height: p.height };
+    for (const level of [4, 9]) {
+      const compress = (px, w, h) => runtime.compressPixels(px, w, h, level), reduce = { level, deflate: runtime.deflate };
+      const rgbaOnly = measure(() => encodeRgbaPng(pixels, p.width, p.height, compress), 5), reduced = measure(() => encodeRgbaPng(pixels, p.width, p.height, compress, reduce), 5);
+      if (!same(rgbaOf(reduced.data), pixels)) throw new Error(`${file}: reduced still PNG changed pixels`);
+      const q = parsePng(reduced.data);
+      row[level] = { rgbaBytes: rgbaOnly.bytes, rgbaMs: median(rgbaOnly.timesMs), bytes: reduced.bytes, ms: median(reduced.timesMs), type: `${q.colorType}/${q.bitDepth}` };
+    }
+    stills.push(row);
+  }
   if (p.bitDepth === 8 && p.colorType === 6 && !p.interlace) {
     const pixels = unfilterRows(idat(bytes), p.width, p.height, 4), row = { file, width: p.width, height: p.height, bytes: {}, ms: {} };
     for (const level of [4, 9]) {
@@ -72,5 +95,5 @@ for (const file of files) {
     idat: { original: streamBytes, redeflateOnly: redeflated, chosen: outStream }, ms: median(out.timesMs) });
 }
 runtime.dispose();
-console.log(JSON.stringify({ width, height, level: 9, pixelEquality, js, wasm, wasm4, legacy, legacy4, syntheticTypes, images, recompress,
+console.log(JSON.stringify({ width, height, level: 9, pixelEquality, js, wasm, wasm4, legacy, legacy4, syntheticTypes, images, recompress, stills,
   note: 'js = encodeRgbaPng (fflate), wasm/wasm4 = compressPixels (JS filter choice + libdeflate) at 9/4, legacy/legacy4 = compressSub (SIMD Sub + libdeflate, the pre-chapter-9 stream).' }, null, 2));
