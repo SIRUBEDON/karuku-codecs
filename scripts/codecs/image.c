@@ -125,6 +125,95 @@ int kw_equal(const uint8_t *a, const uint8_t *b, size_t size) {
   return !memcmp(a + i, b + i, size - i);
 }
 
+/* PNG filtering of 8-bit RGBA rows, matching png.js filterRows byte for byte (bpp 4, row 0 sees a zero row).
+ * mode 0-4: that filter on every row; 5: adaptive, each band of 4 rows uses the filter picked for the band's first
+ * row (smallest sum of |signed byte|, ties to the lower type). Writes rows [from, to) with their filter bytes. */
+#define KW_BAND 4
+static inline unsigned kw_abs(uint8_t v) { return v < 128 ? v : 256 - v; }
+static inline uint8_t kw_paeth(int a, int b, int c) {
+  int pa = b - c, pb = a - c, pc = pa + pb;
+  if (pa < 0) pa = -pa;
+  if (pb < 0) pb = -pb;
+  if (pc < 0) pc = -pc;
+  return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+}
+static int kw_pick(const uint8_t *cur, const uint8_t *up, size_t stride) {
+  unsigned none = 0, sub = 0, upSum = 0, avg = 0, pth = 0;
+  for (size_t x = 0; x < 4 && x < stride; x++) {
+    uint8_t v = cur[x], b = up[x];
+    none += kw_abs(v); sub += kw_abs(v); upSum += kw_abs(v - b); avg += kw_abs(v - (b >> 1)); pth += kw_abs(v - b);
+  }
+  for (size_t x = 4; x < stride; x++) {
+    uint8_t v = cur[x], b = up[x], a = cur[x - 4], c = up[x - 4];
+    none += kw_abs(v); sub += kw_abs(v - a); upSum += kw_abs(v - b); avg += kw_abs(v - ((a + b) >> 1));
+    pth += kw_abs(v - kw_paeth(a, b, c));
+  }
+  int type = 0;
+  unsigned best = none;
+  if (sub < best) { type = 1; best = sub; }
+  if (upSum < best) { type = 2; best = upSum; }
+  if (avg < best) { type = 3; best = avg; }
+  if (pth < best) type = 4;
+  return type;
+}
+static void kw_filter_row(const uint8_t *cur, const uint8_t *up, size_t stride, int type, uint8_t *o) {
+  size_t x = 0, head = stride < 4 ? stride : 4;
+  if (type == 0) { memcpy(o, cur, stride); return; }
+  if (type == 2) {
+#ifdef __wasm_simd128__
+    for (; x + 16 <= stride; x += 16) wasm_v128_store(o + x, wasm_i8x16_sub(wasm_v128_load(cur + x), wasm_v128_load(up + x)));
+#endif
+    for (; x < stride; x++) o[x] = cur[x] - up[x];
+    return;
+  }
+  if (type == 1) {
+    for (; x < head; x++) o[x] = cur[x];
+#ifdef __wasm_simd128__
+    for (; x + 16 <= stride; x += 16) wasm_v128_store(o + x, wasm_i8x16_sub(wasm_v128_load(cur + x), wasm_v128_load(cur + x - 4)));
+#endif
+    for (; x < stride; x++) o[x] = cur[x] - cur[x - 4];
+    return;
+  }
+  if (type == 3) {
+    for (; x < head; x++) o[x] = cur[x] - (up[x] >> 1);
+    for (; x < stride; x++) o[x] = cur[x] - ((cur[x - 4] + up[x]) >> 1);
+    return;
+  }
+  for (; x < head; x++) o[x] = cur[x] - up[x];
+  for (; x < stride; x++) o[x] = cur[x] - kw_paeth(cur[x - 4], up[x], up[x - 4]);
+}
+int kw_filter(const uint8_t *rgba, uint8_t *rows, int width, int height, int mode, int from, int to) {
+  if (width < 1 || height < 1 || mode < 0 || mode > 5 || from < 0 || to > height || from > to) return 0;
+  size_t stride = (size_t)width * 4;
+  uint8_t *zero = calloc(1, stride);
+  if (!zero) return 0;
+  int type = mode;
+  for (int y = from; y < to; y++) {
+    const uint8_t *cur = rgba + y * stride, *up = y ? cur - stride : zero;
+    if (mode == 5 && (y == from || y % KW_BAND == 0)) {
+      int first = y - y % KW_BAND;
+      const uint8_t *row = rgba + first * stride;
+      type = kw_pick(row, first ? row - stride : zero, stride);
+    }
+    uint8_t *out = rows + (size_t)(y - from) * (stride + 1);
+    *out = type;
+    kw_filter_row(cur, up, stride, type, out + 1);
+  }
+  free(zero);
+  return 1;
+}
+/* The whole zlib PNG stream with a filter mode (see kw_filter) at a libdeflate level, in the result buffer. */
+int kw_png(const uint8_t *rgba, int width, int height, int mode, int level) {
+  clear_result();
+  if (width < 1 || height < 1) return 0;
+  size_t size = ((size_t)width * 4 + 1) * height;
+  uint8_t *rows = malloc(size);
+  if (!rows) return 0;
+  int ok = kw_filter(rgba, rows, width, height, mode, 0, height) && kw_zlib(rows, size, level);
+  free(rows);
+  return ok;
+}
+
 WebPAnimDecoder *kw_decoder_new(const uint8_t *data, size_t size) {
   WebPAnimDecoderOptions options;
   if (!WebPAnimDecoderOptionsInit(&options)) return NULL;

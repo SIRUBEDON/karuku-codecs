@@ -86,12 +86,12 @@
     "image": {
       "files": {
         "image-core.js": {
-          "bytes": 12990,
-          "sha256": "54f8b30e1ba1eded5a98dff874876955cf35403564be106b275b4bf03e1eb10a"
+          "bytes": 13221,
+          "sha256": "eaa6d9d6f54369679c0a28aba26c4e0ea38929eaa2c74f52bf50f4a3c310d7dd"
         },
         "image-core.wasm": {
-          "bytes": 698708,
-          "sha256": "737fd878beb63e1a7369453da4d16b52bad4e72e672357afbf48d1a0faf1f8a9"
+          "bytes": 703693,
+          "sha256": "3f909ca03c42aaa5c11405a6854f6cf163f66ea2ca3ff32e496d3847eb48b3f9"
         }
       },
       "initialMemoryBytes": 16777216,
