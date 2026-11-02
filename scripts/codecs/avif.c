@@ -23,13 +23,14 @@ static int valid_size(uint32_t width, uint32_t height) {
   return 1;
 }
 typedef struct { avifEncoder *encoder; avifImage *image; int still; } Encode;
-Encode *ka_encoder_new(uint32_t width, uint32_t height, int plays, int quality, int lossless, int speed, int still) {
+// yuv444: full-resolution chroma for lossy pictures (AV1 High profile); lossless is always 4:4:4 with the identity matrix.
+Encode *ka_encoder_new(uint32_t width, uint32_t height, int plays, int quality, int lossless, int speed, int still, int yuv444) {
   last_error[0] = 0;
   if (!valid_size(width, height)) return NULL;
   Encode *state = calloc(1, sizeof(*state));
   if (!state) { failed(AVIF_RESULT_OUT_OF_MEMORY, NULL); return NULL; }
   state->encoder = avifEncoderCreate();
-  state->image = avifImageCreate(width, height, 8, lossless ? AVIF_PIXEL_FORMAT_YUV444 : AVIF_PIXEL_FORMAT_YUV420);
+  state->image = avifImageCreate(width, height, 8, lossless || yuv444 ? AVIF_PIXEL_FORMAT_YUV444 : AVIF_PIXEL_FORMAT_YUV420);
   if (!state->encoder || !state->image) {
     if (state->encoder) avifEncoderDestroy(state->encoder);
     if (state->image) avifImageDestroy(state->image);

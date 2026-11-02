@@ -65,7 +65,7 @@ build-libraries.mjs・build-avif.mjs・build-audio-library.sh・build-ffmpeg.sh�
 | 用途 | 実サイズ | 初期WASMメモリ | スレッド |
 | --- | ---: | ---: | ---: |
 | 画像用 libwebp + libdeflate | 706,584 B | 16 MiB | 1/Worker |
-| AVIF用 libavif + libaom | 9,104,674 B | 32 MiB | 1/Worker |
+| AVIF用 libavif + libaom | 9,095,817 B | 32 MiB | 1/Worker |
 | 動画用FFmpeg ST | 4,064,001 B | 32 MiB | 1/Worker |
 | 動画用FFmpeg MT | 4,174,894 B | 128 MiB | 2 |
 | 音声用FFmpeg + LAME + Vorbis | 2,200,750 B | 32 MiB | 1/Worker |

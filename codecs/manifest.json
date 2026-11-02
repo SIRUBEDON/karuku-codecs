@@ -100,12 +100,12 @@
     "avif": {
       "files": {
         "avif-core.js": {
-          "bytes": 16894,
-          "sha256": "1ac08e6a4baca4a1c544afed3863ef6fe550f4877a71962fda06bceba65965a7"
+          "bytes": 16879,
+          "sha256": "a4af0968eb5754bc51f6b9dcd416beb48e87ef690c6dd59111d2bc3318c058fa"
         },
         "avif-core.wasm": {
-          "bytes": 9104674,
-          "sha256": "39b1dca8a7d61d2b575bd33d57eb55062cf9dc4cf939ae9c333cefc07cfcf327"
+          "bytes": 9095817,
+          "sha256": "53711d47835655e059a960a92a29a86065cbc479efac236a6aec2d7ff8ef196e"
         }
       },
       "initialMemoryBytes": 33554432,
